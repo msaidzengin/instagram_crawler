@@ -6,6 +6,7 @@ from datetime import datetime
 import pandas as pd
 import numpy as np
 import requests
+import zipfile
 import time
 import json
 import re
@@ -70,11 +71,14 @@ def process_data(images_data):
     return result_data
 
 
-def save_all_photos(result_path, instagram_url, profile_photo, post_data):
-    name = result_path + '/' + instagram_url + "_profile_photo.jpg"
-    with open(name, 'wb') as handler:
-        img_data = requests.get(profile_photo).content
-        handler.write(img_data)
+def save_all_photos(result_path, profile_photo, post_data):
+    
+    zip_file = zipfile.ZipFile(result_path + "/photos.zip", "w")
+    zip_file.writestr('profile.jpg', requests.get(profile_photo).content)
+    for i in range(len(post_data)):
+        url = post_data[i]['image_url']
+        zip_file.writestr(str(i) + '.jpg', requests.get(url).content)
+    zip_file.close()
 
 
 def main():
@@ -113,7 +117,7 @@ def main():
         json.dump(result_data, f, ensure_ascii=False, indent=4)
 
     if save_photos:
-        save_all_photos(result_path, instagram_url, profile_photo, post_data)
+        save_all_photos(result_path, profile_photo, post_data)
 
 
 if __name__ == "__main__":
