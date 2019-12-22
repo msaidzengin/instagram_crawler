@@ -9,6 +9,14 @@ import json
 import re
 
 
+def get_profile_info():
+    profile_info = driver.find_element_by_class_name('zwlfE').text
+    html_to_parse = str(driver.page_source)
+    html = bs(html_to_parse, "html5lib")
+    profile_photo = html.find("img", {"class": "_6q-tv"}).get('src')
+
+    return profile_info, profile_photo
+
 def load_all_page():
 
     time.sleep(3)
@@ -33,7 +41,26 @@ def load_all_page():
     images_data = set(images_data)
     
     return images_data
+
+
+def process_data(images_data):
+    result_data = []
+
+    for image in images_data:
+        link = 'https://www.instagram.com' + image.find('a', href=True)['href']
+        photo_html = image.find("img", {"class": "FFVAD"})
+        content = photo_html.get('alt')
+        url = photo_html.get('src')
         
+        result_data.append({
+            'post_url': link,
+            'image_url': url,
+            'content': content
+        })
+    
+    return result_data
+
+
 
 path = r"/home/msaidzengin/chromedriver"
 instagram_url = 'msaidzengin'
@@ -42,22 +69,20 @@ result_name = 'result_' + instagram_url + '.json'
 
 driver = webdriver.Chrome(path)
 driver.get(url)
+profile_info, profile_photo = get_profile_info()
+
 images_data = load_all_page()
 driver.quit()
 
-result_data = []
+post_data = process_data(images_data)
 
-for image in images_data:
-    link = 'https://www.instagram.com' + image.find('a', href=True)['href']
-    photo_html = image.find("img", {"class": "FFVAD"})
-    content = photo_html.get('alt')
-    url = photo_html.get('src')
-    
-    result_data.append({
-        'post_url': link,
-        'image_url': url,
-        'content': content
-    })
+result_data = {
+    'name': instagram_url,
+    'profile_info': profile_info,
+    'profile_photo_url': profile_photo,
+    'posts': post_data 
+}
+
 
 with open(result_name, 'w', encoding='utf-8') as f:
     json.dump(result_data, f, ensure_ascii=False, indent=4)
