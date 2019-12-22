@@ -9,7 +9,7 @@ import json
 import re
 
 
-def get_profile_info():
+def get_profile_info(driver):
     profile_info = driver.find_element_by_class_name('zwlfE').text
     html_to_parse = str(driver.page_source)
     html = bs(html_to_parse, "html5lib")
@@ -17,7 +17,8 @@ def get_profile_info():
 
     return profile_info, profile_photo
 
-def load_all_page():
+
+def load_all_page(driver):
 
     time.sleep(3)
     SCROLL_PAUSE_TIME = 2
@@ -37,9 +38,9 @@ def load_all_page():
         html = bs(html_to_parse, "html5lib")
         images_url = html.findAll("div", {"class": "v1Nh3 kIKUG  _bz0w"})
         images_data += images_url
-    
+
     images_data = set(images_data)
-    
+
     return images_data
 
 
@@ -51,39 +52,41 @@ def process_data(images_data):
         photo_html = image.find("img", {"class": "FFVAD"})
         content = photo_html.get('alt')
         url = photo_html.get('src')
-        
+
         result_data.append({
             'post_url': link,
             'image_url': url,
             'content': content
         })
-    
+
     return result_data
 
 
+def main():
+    path = r"/home/msaidzengin/chromedriver"
+    instagram_url = 'msaidzengin'
+    url = 'https://www.instagram.com/' + instagram_url
+    result_name = 'result_' + instagram_url + '.json'
 
-path = r"/home/msaidzengin/chromedriver"
-instagram_url = 'msaidzengin'
-url = 'https://www.instagram.com/' + instagram_url
-result_name = 'result_' + instagram_url + '.json'
+    driver = webdriver.Chrome(path)
+    driver.get(url)
+    profile_info, profile_photo = get_profile_info(driver)
 
-driver = webdriver.Chrome(path)
-driver.get(url)
-profile_info, profile_photo = get_profile_info()
+    images_data = load_all_page(driver)
+    driver.quit()
 
-images_data = load_all_page()
-driver.quit()
+    post_data = process_data(images_data)
 
-post_data = process_data(images_data)
+    result_data = {
+        'name': instagram_url,
+        'profile_info': profile_info,
+        'profile_photo_url': profile_photo,
+        'posts': post_data
+    }
 
-result_data = {
-    'name': instagram_url,
-    'profile_info': profile_info,
-    'profile_photo_url': profile_photo,
-    'posts': post_data 
-}
+    with open(result_name, 'w', encoding='utf-8') as f:
+        json.dump(result_data, f, ensure_ascii=False, indent=4)
 
 
-with open(result_name, 'w', encoding='utf-8') as f:
-    json.dump(result_data, f, ensure_ascii=False, indent=4)
-
+if __name__ == "__main__":
+    main()
