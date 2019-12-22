@@ -1,19 +1,27 @@
-from selenium import webdriver
-from urllib.request import urlopen
-from bs4 import BeautifulSoup as bs
 from pandas.io.json import json_normalize
+from bs4 import BeautifulSoup as bs
+from urllib.request import urlopen
+from selenium import webdriver
+from datetime import datetime
 import pandas as pd
 import numpy as np
+import requests
 import time
 import json
 import re
+import os
 
 
 def get_profile_info(driver):
-    profile_info = driver.find_element_by_class_name('zwlfE').text
+    info = driver.find_element_by_class_name('zwlfE').text
     html_to_parse = str(driver.page_source)
     html = bs(html_to_parse, "html5lib")
     profile_photo = html.find("img", {"class": "_6q-tv"}).get('src')
+
+    profile_info = {}
+    info = info.split("\n")
+    for i in range(len(info)):
+        profile_info[i] = info[i]
 
     return profile_info, profile_photo
 
@@ -62,11 +70,18 @@ def process_data(images_data):
     return result_data
 
 
+def save_all_photos(result_path, instagram_url, profile_photo, post_data):
+    name = result_path + '/' + instagram_url + "_profile_photo.jpg"
+    with open(name, 'wb') as handler:
+        img_data = requests.get(profile_photo).content
+        handler.write(img_data)
+
+
 def main():
     path = r"/home/msaidzengin/chromedriver"
     instagram_url = 'msaidzengin'
+    save_photos = True
     url = 'https://www.instagram.com/' + instagram_url
-    result_name = 'result_' + instagram_url + '.json'
 
     driver = webdriver.Chrome(path)
     driver.get(url)
@@ -77,15 +92,28 @@ def main():
 
     post_data = process_data(images_data)
 
+    now = datetime.now()
+    dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
+
     result_data = {
+        'crawl_time': dt_string,
         'name': instagram_url,
+        'instagram_url': url,
         'profile_info': profile_info,
         'profile_photo_url': profile_photo,
         'posts': post_data
     }
 
+    result_path = os.getcwd() + '/result_' + instagram_url
+    os.makedirs(result_path)
+
+    result_name = result_path + '/result_' + instagram_url + '.json'
+
     with open(result_name, 'w', encoding='utf-8') as f:
         json.dump(result_data, f, ensure_ascii=False, indent=4)
+
+    if save_photos:
+        save_all_photos(result_path, instagram_url, profile_photo, post_data)
 
 
 if __name__ == "__main__":
